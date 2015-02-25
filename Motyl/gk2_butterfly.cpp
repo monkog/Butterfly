@@ -27,21 +27,21 @@ const unsigned int Butterfly::VB_STRIDE = sizeof(VertexPosNormal);
 const unsigned int Butterfly::VB_OFFSET = 0;
 const unsigned int Butterfly::BS_MASK = 0xffffffff;
 
-const XMFLOAT4 Butterfly::COLORS[] = 
-	{ 
-		XMFLOAT4(253.0f/255.0f, 198.0f/255.0f, 137.0f/255.0f, 100.0f/255.0f),
-		XMFLOAT4(255.0f/255.0f, 247.0f/255.0f, 153.0f/255.0f, 100.0f/255.0f),
-		XMFLOAT4(196.0f/255.0f, 223.0f/255.0f, 155.0f/255.0f, 100.0f/255.0f),
-		XMFLOAT4(162.0f/255.0f, 211.0f/255.0f, 156.0f/255.0f, 100.0f/255.0f),
-		XMFLOAT4(130.0f/255.0f, 202.0f/255.0f, 156.0f/255.0f, 100.0f/255.0f),
-		XMFLOAT4(122.0f/255.0f, 204.0f/255.0f, 200.0f/255.0f, 100.0f/255.0f),
-		XMFLOAT4(109.0f/255.0f, 207.0f/255.0f, 246.0f/255.0f, 100.0f/255.0f),
-		XMFLOAT4(125.0f/255.0f, 167.0f/255.0f, 216.0f/255.0f, 100.0f/255.0f),
-		XMFLOAT4(131.0f/255.0f, 147.0f/255.0f, 202.0f/255.0f, 100.0f/255.0f),
-		XMFLOAT4(135.0f/255.0f, 129.0f/255.0f, 189.0f/255.0f, 100.0f/255.0f),
-		XMFLOAT4(161.0f/255.0f, 134.0f/255.0f, 190.0f/255.0f, 100.0f/255.0f),
-		XMFLOAT4(244.0f/255.0f, 154.0f/255.0f, 193.0f/255.0f, 100.0f/255.0f)
-	};
+const XMFLOAT4 Butterfly::COLORS[] =
+{
+	XMFLOAT4(253.0f / 255.0f, 198.0f / 255.0f, 137.0f / 255.0f, 100.0f / 255.0f),
+	XMFLOAT4(255.0f / 255.0f, 247.0f / 255.0f, 153.0f / 255.0f, 100.0f / 255.0f),
+	XMFLOAT4(196.0f / 255.0f, 223.0f / 255.0f, 155.0f / 255.0f, 100.0f / 255.0f),
+	XMFLOAT4(162.0f / 255.0f, 211.0f / 255.0f, 156.0f / 255.0f, 100.0f / 255.0f),
+	XMFLOAT4(130.0f / 255.0f, 202.0f / 255.0f, 156.0f / 255.0f, 100.0f / 255.0f),
+	XMFLOAT4(122.0f / 255.0f, 204.0f / 255.0f, 200.0f / 255.0f, 100.0f / 255.0f),
+	XMFLOAT4(109.0f / 255.0f, 207.0f / 255.0f, 246.0f / 255.0f, 100.0f / 255.0f),
+	XMFLOAT4(125.0f / 255.0f, 167.0f / 255.0f, 216.0f / 255.0f, 100.0f / 255.0f),
+	XMFLOAT4(131.0f / 255.0f, 147.0f / 255.0f, 202.0f / 255.0f, 100.0f / 255.0f),
+	XMFLOAT4(135.0f / 255.0f, 129.0f / 255.0f, 189.0f / 255.0f, 100.0f / 255.0f),
+	XMFLOAT4(161.0f / 255.0f, 134.0f / 255.0f, 190.0f / 255.0f, 100.0f / 255.0f),
+	XMFLOAT4(244.0f / 255.0f, 154.0f / 255.0f, 193.0f / 255.0f, 100.0f / 255.0f)
+};
 
 void* Butterfly::operator new(size_t size)
 {
@@ -175,7 +175,7 @@ void Butterfly::InitializeBox()
 void Butterfly::InitializePentagon()
 {
 	VertexPosNormal vertices[5];
-	float a=0, da = XM_2PI / 5.0f;
+	float a = 0, da = XM_2PI / 5.0f;
 	for (int i = 0; i < 5; ++i, a -= da)
 	{
 		float sina, cosa;
@@ -192,6 +192,13 @@ void Butterfly::InitializeDodecahedron()
 //Compute dodecahedronMtx and mirrorMtx
 {
 	//TODO: write code here
+	m_dodecahedronMtx[0] = XMMatrixRotationX(XM_PIDIV2) * XMMatrixTranslation(0, -DODECAHEDRON_H / 2, 0);
+	m_dodecahedronMtx[1] = m_dodecahedronMtx[0] * XMMatrixRotationZ(XM_PI - DODECAHEDRON_A) * XMMatrixRotationY(XM_PI);
+	for (int i = 1; i < 5; i++)
+		m_dodecahedronMtx[i + 1] = m_dodecahedronMtx[i] * XMMatrixRotationY(2 * XM_PI / 5);
+
+	for (int i = 0; i < 6; i++)
+		m_dodecahedronMtx[i + 6] = m_dodecahedronMtx[i] * XMMatrixRotationZ(XM_PI);
 }
 
 XMFLOAT3 Butterfly::MoebiusStripPos(float t, float s)
@@ -242,7 +249,7 @@ void Butterfly::SetShaders()
 
 void Butterfly::SetConstantBuffers()
 {
-	ID3D11Buffer* vsb[] = { m_cbWorld.get(),  m_cbView.get(),  m_cbProj.get(), m_cbLightPos.get() };
+	ID3D11Buffer* vsb[] = { m_cbWorld.get(), m_cbView.get(), m_cbProj.get(), m_cbLightPos.get() };
 	m_context->VSSetConstantBuffers(0, 4, vsb);
 	ID3D11Buffer* psb[] = { m_cbLightColors.get(), m_cbSurfaceColor.get() };
 	m_context->PSSetConstantBuffers(0, 2, psb);
@@ -309,7 +316,7 @@ void Butterfly::UpdateButterfly(float dtime)
 	while (lap > LAP_TIME)
 		lap -= LAP_TIME;
 	//Value of the Moebius strip t parameter
-	float t = 2 * lap/LAP_TIME;
+	float t = 2 * lap / LAP_TIME;
 	//Angle between wing current and vertical position
 	float a = t * WING_MAX_A;
 	t *= XM_2PI;
@@ -370,12 +377,12 @@ void Butterfly::Update(float dt)
 	if (prevState.isButtonDown(0))
 	{
 		POINT d = currentState.getMousePositionChange();
-		m_camera.Rotate(d.y/300.f, d.x/300.f);
+		m_camera.Rotate(d.y / 300.f, d.x / 300.f);
 	}
 	else if (prevState.isButtonDown(1))
 	{
 		POINT d = currentState.getMousePositionChange();
-		m_camera.Zoom(d.y/10.0f);
+		m_camera.Zoom(d.y / 10.0f);
 	}
 	else
 		change = false;
@@ -388,7 +395,7 @@ void Butterfly::DrawBox()
 {
 	const XMMATRIX worldMtx = XMMatrixIdentity();
 	m_context->UpdateSubresource(m_cbWorld.get(), 0, 0, &worldMtx, 0, 0);
-	
+
 	ID3D11Buffer* b = m_vbBox.get();
 	m_context->IASetVertexBuffers(0, 1, &b, &VB_STRIDE, &VB_OFFSET);
 	m_context->IASetIndexBuffer(m_ibBox.get(), DXGI_FORMAT_R16_UINT, 0);
@@ -399,6 +406,16 @@ void Butterfly::DrawDodecahedron(bool colors)
 //Draw dodecahedron. If color is true, use render faces with coresponding colors. Otherwise render using white color
 {
 	//TODO: write code here
+	for (int i = 0; i < 12; i++)
+	{
+		const XMMATRIX worldMtx = m_dodecahedronMtx[i];
+		m_context->UpdateSubresource(m_cbWorld.get(), 0, 0, &worldMtx, 0, 0);
+
+		ID3D11Buffer* b = m_vbPentagon.get();
+		m_context->IASetVertexBuffers(0, 1, &b, &VB_STRIDE, &VB_OFFSET);
+		m_context->IASetIndexBuffer(m_ibPentagon.get(), DXGI_FORMAT_R16_UINT, 0);
+		m_context->DrawIndexed(9, 0, 0);
+	}
 }
 
 void Butterfly::DrawMoebiusStrip()
@@ -442,7 +459,7 @@ void Butterfly::Render()
 	float clearColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 	m_context->ClearRenderTargetView(m_backBuffer.get(), clearColor);
 	m_context->ClearDepthStencilView(m_depthStencilView.get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
-	
+
 	//Render box with all three lights
 	SetLight1();
 	SetSurfaceColor(XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
