@@ -199,6 +199,10 @@ void Butterfly::InitializeDodecahedron()
 
 	for (int i = 0; i < 6; i++)
 		m_dodecahedronMtx[i + 6] = m_dodecahedronMtx[i] * XMMatrixRotationZ(XM_PI);
+
+	XMVECTOR v;
+	for (int i = 0; i < 12; i++)
+		m_mirrorMtx[i] = XMMatrixInverse(&v, m_dodecahedronMtx[i]) * XMMatrixScaling(1, 1, -1) * m_dodecahedronMtx[i];
 }
 
 XMFLOAT3 Butterfly::MoebiusStripPos(float t, float s)
@@ -463,7 +467,7 @@ void Butterfly::Render()
 	//Render box with all three lights
 	SetLight1();
 	SetSurfaceColor(XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
-	DrawBox();
+	//DrawBox();
 
 	//render mirrored worlds
 	for (int i = 0; i < 12; ++i)
