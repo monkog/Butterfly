@@ -54,7 +54,7 @@ void Butterfly::operator delete(void* ptr)
 }
 
 Butterfly::Butterfly(HINSTANCE hInstance)
-	: ApplicationBase(hInstance), m_camera(0.01f, 100.0f)
+: ApplicationBase(hInstance), m_camera(0.01f, 100.0f)
 {
 
 }
@@ -83,9 +83,9 @@ void Butterfly::InitializeConstantBuffers()
 	m_cbWorld = m_device.CreateBuffer(desc);
 	m_cbView = m_device.CreateBuffer(desc);
 	m_cbProj = m_device.CreateBuffer(desc);
-	desc.ByteWidth = sizeof(XMFLOAT4) * 3;
+	desc.ByteWidth = sizeof(XMFLOAT4)* 3;
 	m_cbLightPos = m_device.CreateBuffer(desc);
-	desc.ByteWidth = sizeof(XMFLOAT4) * 5;
+	desc.ByteWidth = sizeof(XMFLOAT4)* 5;
 	m_cbLightColors = m_device.CreateBuffer(desc);
 	desc.ByteWidth = sizeof(XMFLOAT4);
 	m_cbSurfaceColor = m_device.CreateBuffer(desc);
@@ -208,20 +208,29 @@ void Butterfly::InitializeDodecahedron()
 XMFLOAT3 Butterfly::MoebiusStripPos(float t, float s)
 //Compute the position of point on the Moebius strip for parameters t and s
 {
-	return XMFLOAT3(0.0f, 0.0f, 0.0f); //TODO: replace with correct version
+	float x = cos(MOEBIUS_R + (MOEBIUS_W * s * cos(0.5 * t)));
+	float y = sin(t) *(MOEBIUS_R + (MOEBIUS_W * s * cos(0.5 * t)));
+	float z = MOEBIUS_W * s * sin(0.5 * t);
+	return XMFLOAT3(x, y, z); //TODO: replace with correct version
 }
 
 XMVECTOR Butterfly::MoebiusStripDt(float t, float s)
 //Compute the t-derivative of point on the Moebius strip for parameters t and s
 {
-	XMFLOAT3 dt(1.0f, 0.0f, 0.0f); //TODO: replace with correct version
+	float x = (-MOEBIUS_R * sin(t)) - (0.5 * s * MOEBIUS_W * sin(0.5 * t) * cos(t)) - (MOEBIUS_W * s * cos(0.5 * t) * sin(t));
+	float y = (MOEBIUS_R * cos(t)) - (0.5 * s * MOEBIUS_W * sin(0.5 * t)) + (MOEBIUS_W * s * cos(0.5 * t) * cos(t));
+	float z = 0.5 * s * MOEBIUS_W * cos(t);
+	XMFLOAT3 dt(x, y, z); //TODO: replace with correct version
 	return XMLoadFloat3(&dt);
 }
 
 XMVECTOR Butterfly::MoebiusStripDs(float t, float s)
 // Return the s-derivative of point on the Moebius strip for parameters t and s
 {
-	XMFLOAT3 dt(1.0f, 0.0f, 0.0f); //TODO: replace with correct version
+	float x = cos(0.5 * t) * cos(t);
+	float y = cos(0.5 * t) * sin(t);
+	float z = sin(0.5 * t);
+	XMFLOAT3 dt(x, y, z); //TODO: replace with correct version
 	return XMLoadFloat3(&dt);
 }
 
@@ -229,6 +238,10 @@ void Butterfly::InitializeMoebiusStrip()
 //Create vertex and index buffers for the Moebius strip
 {
 	//TODO: write code here
+	for (int i = 0; i < 128; i++)
+	{
+
+	}
 }
 
 void Butterfly::InitializeButterfly()
@@ -334,12 +347,12 @@ void Butterfly::SetLight0()
 //Setup one positional light at the camera
 {
 	XMFLOAT4 positions[3];
-	ZeroMemory(positions, sizeof(XMFLOAT4) * 3);
+	ZeroMemory(positions, sizeof(XMFLOAT4)* 3);
 	positions[0] = m_camera.GetPosition();
 	m_context->UpdateSubresource(m_cbLightPos.get(), 0, 0, positions, 0, 0);
 
 	XMFLOAT4 colors[5];
-	ZeroMemory(colors, sizeof(XMFLOAT4) * 5);
+	ZeroMemory(colors, sizeof(XMFLOAT4)* 5);
 	colors[0] = XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f); //ambient color
 	colors[1] = XMFLOAT4(1.0f, 0.8f, 1.0f, 100.0f); //surface [ka, kd, ks, m]
 	colors[2] = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); //light0 color
@@ -351,13 +364,13 @@ void Butterfly::SetLight1()
 //Setup two additional positional lights, green and blue.
 {
 	XMFLOAT4 positions[3];
-	ZeroMemory(positions, sizeof(XMFLOAT4) * 3);
+	ZeroMemory(positions, sizeof(XMFLOAT4)* 3);
 	positions[0] = m_camera.GetPosition(); //white light position
 	//TODO: write the rest of code here
 	m_context->UpdateSubresource(m_cbLightPos.get(), 0, 0, positions, 0, 0);
 
 	XMFLOAT4 colors[5];
-	ZeroMemory(colors, sizeof(XMFLOAT4) * 5);
+	ZeroMemory(colors, sizeof(XMFLOAT4)* 5);
 	colors[0] = XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f); //ambient color
 	colors[1] = XMFLOAT4(1.0f, 0.8f, 1.0f, 100.0f); //surface [ka, kd, ks, m]
 	colors[2] = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); //white light color
@@ -476,7 +489,7 @@ void Butterfly::Render()
 	//render dodecahedron with one light and alpha blending
 	m_context->OMSetBlendState(m_bsAlpha.get(), 0, BS_MASK);
 	SetLight0();
-	DrawDodecahedron(true);
+	//DrawDodecahedron(true);
 	m_context->OMSetBlendState(0, 0, BS_MASK);
 
 	//render the rest of the scene with all lights
