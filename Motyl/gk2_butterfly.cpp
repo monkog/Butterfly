@@ -239,29 +239,29 @@ void Butterfly::InitializeMoebiusStrip()
 {
 	//TODO: write code here
 	float delta = XM_PI * 4 / DIVISION_NUMBER;
-	VertexPosNormal vertices[256];
-	for (int i = 0; i < 128; i++)
+	VertexPosNormal vertices[DIVISION_NUMBER * 2];
+	for (int i = 0; i < DIVISION_NUMBER; i++)
 	{
 		XMVECTOR normal = MoebiusStripDs(i * delta, 1) * MoebiusStripDt(i * delta, 1);
 		vertices[i] = VertexPosNormal{ MoebiusStripPos(i * delta, 1), CreateNormalVector(i * delta, 1) };
 		vertices[++i] = VertexPosNormal{ MoebiusStripPos(i * delta, -1), CreateNormalVector(i * delta, -1) };
 	}
-	m_vbMoebius = m_device.CreateVertexBuffer(vertices, 256);
+	m_vbMoebius = m_device.CreateVertexBuffer(vertices, DIVISION_NUMBER);
 
-	unsigned short indices[256 * 3];
+	unsigned short indices[DIVISION_NUMBER * 3];
 	int index = 0;
-	for (int i = 0; i < 256; i += 2)
+	for (int i = 0; i < DIVISION_NUMBER; i += 2)
 	{
 		indices[index++] = i;
-		indices[index++] = (i + 1) % 256;
-		indices[index++] = (i + 3) % 256;
+		indices[index++] = (i + 1) % DIVISION_NUMBER;
+		indices[index++] = (i + 3) % DIVISION_NUMBER;
 
-		indices[index++] = (i + 3) % 256;
-		indices[index++] = (i + 2) % 256;
+		indices[index++] = (i + 3) % DIVISION_NUMBER;
+		indices[index++] = (i + 2) % DIVISION_NUMBER;
 		indices[index++] = i;
 	}
 
-	m_ibMoebius = m_device.CreateIndexBuffer(indices, 256 * 3);
+	m_ibMoebius = m_device.CreateIndexBuffer(indices, DIVISION_NUMBER * 3);
 }
 
 XMFLOAT3 Butterfly::CreateNormalVector(float t, float s)
@@ -476,7 +476,7 @@ void Butterfly::DrawMoebiusStrip()
 	ID3D11Buffer* b = m_vbMoebius.get();
 	m_context->IASetVertexBuffers(0, 1, &b, &VB_STRIDE, &VB_OFFSET);
 	m_context->IASetIndexBuffer(m_ibMoebius.get(), DXGI_FORMAT_R16_UINT, 0);
-	m_context->DrawIndexed(256 * 3, 0, 0);
+	m_context->DrawIndexed(DIVISION_NUMBER * 3, 0, 0);
 }
 
 void Butterfly::DrawButterfly()
