@@ -253,12 +253,12 @@ void Butterfly::InitializeMoebiusStrip()
 	for (int i = 0; i < 256; i += 2)
 	{
 		indices[index++] = i;
-		indices[index++] = i + 1;
-		indices[index++] = i + 3;
+		indices[index++] = (i + 1) % 256;
+		indices[index++] = (i + 3) % 256;
 
+		indices[index++] = (i + 3) % 256;
+		indices[index++] = (i + 2) % 256;
 		indices[index++] = i;
-		indices[index++] = i + 2;
-		indices[index++] = i + 3;
 	}
 
 	m_ibMoebius = m_device.CreateIndexBuffer(indices, 256 * 3);
