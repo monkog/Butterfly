@@ -56,6 +56,8 @@ namespace gk2
 		static const unsigned int VB_STRIDE;
 		static const unsigned int VB_OFFSET;
 		static const unsigned int BS_MASK;
+		//Division number for Mobius strip
+		static const unsigned int DIVISION_NUMBER = 128;
 
 		//Table of colors for dodecahedron's faces
 		static const XMFLOAT4 COLORS[12];
@@ -176,6 +178,9 @@ namespace gk2
 		void DrawBilboards();
 		//Renders a mirrored scene
 		void DrawMirroredWorld(int i);
+
+		//Creates the normal vector
+		XMFLOAT3 CreateNormalVector(float t, float s);
 	};
 }
 

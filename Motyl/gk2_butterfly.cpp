@@ -208,7 +208,7 @@ void Butterfly::InitializeDodecahedron()
 XMFLOAT3 Butterfly::MoebiusStripPos(float t, float s)
 //Compute the position of point on the Moebius strip for parameters t and s
 {
-	float x = cos(MOEBIUS_R + (MOEBIUS_W * s * cos(0.5 * t)));
+	float x = cos(t) *(MOEBIUS_R + (MOEBIUS_W * s * cos(0.5 * t)));
 	float y = sin(t) *(MOEBIUS_R + (MOEBIUS_W * s * cos(0.5 * t)));
 	float z = MOEBIUS_W * s * sin(0.5 * t);
 	return XMFLOAT3(x, y, z); //TODO: replace with correct version
@@ -218,7 +218,7 @@ XMVECTOR Butterfly::MoebiusStripDt(float t, float s)
 //Compute the t-derivative of point on the Moebius strip for parameters t and s
 {
 	float x = (-MOEBIUS_R * sin(t)) - (0.5 * s * MOEBIUS_W * sin(0.5 * t) * cos(t)) - (MOEBIUS_W * s * cos(0.5 * t) * sin(t));
-	float y = (MOEBIUS_R * cos(t)) - (0.5 * s * MOEBIUS_W * sin(0.5 * t)) + (MOEBIUS_W * s * cos(0.5 * t) * cos(t));
+	float y = (MOEBIUS_R * cos(t)) - (0.5 * s * MOEBIUS_W * sin(0.5 * t) * sin(t)) + (MOEBIUS_W * s * cos(0.5 * t) * cos(t));
 	float z = 0.5 * s * MOEBIUS_W * cos(t);
 	XMFLOAT3 dt(x, y, z); //TODO: replace with correct version
 	return XMLoadFloat3(&dt);
@@ -238,10 +238,41 @@ void Butterfly::InitializeMoebiusStrip()
 //Create vertex and index buffers for the Moebius strip
 {
 	//TODO: write code here
+	float delta = XM_PI * 4 / DIVISION_NUMBER;
+	VertexPosNormal vertices[256];
 	for (int i = 0; i < 128; i++)
 	{
-
+		XMVECTOR normal = MoebiusStripDs(i * delta, 1) * MoebiusStripDt(i * delta, 1);
+		vertices[i] = VertexPosNormal{ MoebiusStripPos(i * delta, 1), CreateNormalVector(i * delta, 1) };
+		vertices[++i] = VertexPosNormal{ MoebiusStripPos(i * delta, -1), CreateNormalVector(i * delta, -1) };
 	}
+	m_vbMoebius = m_device.CreateVertexBuffer(vertices, 256);
+
+	unsigned short indices[256 * 3];
+	int index = 0;
+	for (int i = 0; i < 256; i += 2)
+	{
+		indices[index++] = i;
+		indices[index++] = i + 1;
+		indices[index++] = i + 3;
+
+		indices[index++] = i;
+		indices[index++] = i + 2;
+		indices[index++] = i + 3;
+	}
+
+	m_ibMoebius = m_device.CreateIndexBuffer(indices, 256 * 3);
+}
+
+XMFLOAT3 Butterfly::CreateNormalVector(float t, float s)
+{
+	XMVECTOR dt = XMVector3Normalize(MoebiusStripDt(t, s));
+	XMVECTOR ds = XMVector3Normalize(MoebiusStripDs(t, s));
+
+	XMVECTOR cross = XMVector3Normalize(XMVector3Cross(ds, dt));
+	XMFLOAT3 floatV;
+	XMStoreFloat3(&floatV, cross);
+	return floatV;
 }
 
 void Butterfly::InitializeButterfly()
@@ -439,6 +470,13 @@ void Butterfly::DrawMoebiusStrip()
 //Draw the Moebius strip
 {
 	//TODO: write code here
+	const XMMATRIX worldMtx = XMMatrixIdentity();
+	m_context->UpdateSubresource(m_cbWorld.get(), 0, 0, &worldMtx, 0, 0);
+
+	ID3D11Buffer* b = m_vbMoebius.get();
+	m_context->IASetVertexBuffers(0, 1, &b, &VB_STRIDE, &VB_OFFSET);
+	m_context->IASetIndexBuffer(m_ibMoebius.get(), DXGI_FORMAT_R16_UINT, 0);
+	m_context->DrawIndexed(256 * 3, 0, 0);
 }
 
 void Butterfly::DrawButterfly()
@@ -489,7 +527,7 @@ void Butterfly::Render()
 	//render dodecahedron with one light and alpha blending
 	m_context->OMSetBlendState(m_bsAlpha.get(), 0, BS_MASK);
 	SetLight0();
-	//DrawDodecahedron(true);
+	DrawDodecahedron(true);
 	m_context->OMSetBlendState(0, 0, BS_MASK);
 
 	//render the rest of the scene with all lights
