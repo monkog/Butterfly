@@ -243,8 +243,10 @@ void Butterfly::InitializeMoebiusStrip()
 	for (int i = 0; i < DIVISION_NUMBER; i++)
 	{
 		XMVECTOR normal = MoebiusStripDs(i * delta, 1) * MoebiusStripDt(i * delta, 1);
-		vertices[i] = VertexPosNormal{ MoebiusStripPos(i * delta, 1), CreateNormalVector(i * delta, 1) };
-		vertices[++i] = VertexPosNormal{ MoebiusStripPos(i * delta, -1), CreateNormalVector(i * delta, -1) };
+		vertices[i].Pos = MoebiusStripPos(i * delta, 1);
+		vertices[i].Normal = CreateNormalVector(i * delta, 1);
+		vertices[++i].Pos = MoebiusStripPos(i * delta, -1);
+		vertices[i].Normal = CreateNormalVector(i * delta, -1);
 	}
 	m_vbMoebius = m_device.CreateVertexBuffer(vertices, DIVISION_NUMBER);
 
