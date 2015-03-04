@@ -27,6 +27,9 @@ const unsigned int Butterfly::VB_STRIDE = sizeof(VertexPosNormal);
 const unsigned int Butterfly::VB_OFFSET = 0;
 const unsigned int Butterfly::BS_MASK = 0xffffffff;
 
+const XMFLOAT4 Butterfly::BLUE_LIGHT_POS = XMFLOAT4(-1.0f, -1.0f, -1.0f, 1.0f);
+const XMFLOAT4 Butterfly::GREEN_LIGHT_POS = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+
 const XMFLOAT4 Butterfly::COLORS[] =
 {
 	XMFLOAT4(253.0f / 255.0f, 198.0f / 255.0f, 137.0f / 255.0f, 100.0f / 255.0f),
@@ -54,7 +57,7 @@ void Butterfly::operator delete(void* ptr)
 }
 
 Butterfly::Butterfly(HINSTANCE hInstance)
-: ApplicationBase(hInstance), m_camera(0.01f, 100.0f)
+	: ApplicationBase(hInstance), m_camera(0.01f, 100.0f)
 {
 
 }
@@ -92,15 +95,36 @@ void Butterfly::InitializeConstantBuffers()
 }
 
 void Butterfly::InitializeRenderStates()
-//Setup render states used in various stages of the scene rendering
+	//Setup render states used in various stages of the scene rendering
 {
 	D3D11_DEPTH_STENCIL_DESC dssDesc = m_device.DefaultDepthStencilDesc();
+	//Disable writing to the buffer (bufor szablonu)
+	dssDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+
+	//Never write to back faces
+	dssDesc.BackFace.StencilFunc = D3D11_COMPARISON_NEVER;
+	//Always write to front faces
+	dssDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+	//After passing the buffer test above, replace values
+	dssDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
+
 	//Setup depth stencil state for writing
 	m_dssWrite = m_device.CreateDepthStencilState(dssDesc);
+
+	//Enable previously disabled buffer
+	dssDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+	//Pass the test only if values in buffer are equal to the test one
+	dssDesc.FrontFace.StencilFunc = D3D11_COMPARISON_EQUAL;
+	//Keep the previously set value after passing the buffer test
+	dssDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+
 	//Setup depth stencil state for testing
 	m_dssTest = m_device.CreateDepthStencilState(dssDesc);
 
 	D3D11_RASTERIZER_DESC rsDesc = m_device.DefaultRasterizerDesc();
+	//Sets the CCW faces to be front;
+	rsDesc.FrontCounterClockwise = true;
+
 	//Set rasterizer state front face to ccw
 	m_rsCounterClockwise = m_device.CreateRasterizerState(rsDesc);
 
@@ -189,7 +213,7 @@ void Butterfly::InitializePentagon()
 }
 
 void Butterfly::InitializeDodecahedron()
-//Compute dodecahedronMtx and mirrorMtx
+	//Compute dodecahedronMtx and mirrorMtx
 {
 	//TODO: write code here
 	m_dodecahedronMtx[0] = XMMatrixRotationX(XM_PIDIV2) * XMMatrixTranslation(0, -DODECAHEDRON_H / 2, 0);
@@ -206,7 +230,7 @@ void Butterfly::InitializeDodecahedron()
 }
 
 XMFLOAT3 Butterfly::MoebiusStripPos(float t, float s)
-//Compute the position of point on the Moebius strip for parameters t and s
+	//Compute the position of point on the Moebius strip for parameters t and s
 {
 	float x = cos(t) *(MOEBIUS_R + (MOEBIUS_W * s * cos(0.5 * t)));
 	float y = sin(t) *(MOEBIUS_R + (MOEBIUS_W * s * cos(0.5 * t)));
@@ -215,7 +239,7 @@ XMFLOAT3 Butterfly::MoebiusStripPos(float t, float s)
 }
 
 XMVECTOR Butterfly::MoebiusStripDt(float t, float s)
-//Compute the t-derivative of point on the Moebius strip for parameters t and s
+	//Compute the t-derivative of point on the Moebius strip for parameters t and s
 {
 	float x = (-MOEBIUS_R * sin(t)) - (0.5 * s * MOEBIUS_W * sin(0.5 * t) * cos(t)) - (MOEBIUS_W * s * cos(0.5 * t) * sin(t));
 	float y = (MOEBIUS_R * cos(t)) - (0.5 * s * MOEBIUS_W * sin(0.5 * t) * sin(t)) + (MOEBIUS_W * s * cos(0.5 * t) * cos(t));
@@ -225,7 +249,7 @@ XMVECTOR Butterfly::MoebiusStripDt(float t, float s)
 }
 
 XMVECTOR Butterfly::MoebiusStripDs(float t, float s)
-// Return the s-derivative of point on the Moebius strip for parameters t and s
+	// Return the s-derivative of point on the Moebius strip for parameters t and s
 {
 	float x = cos(0.5 * t) * cos(t);
 	float y = cos(0.5 * t) * sin(t);
@@ -235,12 +259,12 @@ XMVECTOR Butterfly::MoebiusStripDs(float t, float s)
 }
 
 void Butterfly::InitializeMoebiusStrip()
-//Create vertex and index buffers for the Moebius strip
+	//Create vertex and index buffers for the Moebius strip
 {
 	//TODO: write code here
-	float delta = XM_PI * 4 / DIVISION_NUMBER;
-	VertexPosNormal vertices[DIVISION_NUMBER * 2];
-	for (int i = 0; i < DIVISION_NUMBER; i++)
+	float delta = XM_PI * 4 / MOEBIUS_N;
+	VertexPosNormal vertices[MOEBIUS_N * 2];
+	for (int i = 0; i < MOEBIUS_N; i++)
 	{
 		XMVECTOR normal = MoebiusStripDs(i * delta, 1) * MoebiusStripDt(i * delta, 1);
 		vertices[i].Pos = MoebiusStripPos(i * delta, 1);
@@ -248,22 +272,22 @@ void Butterfly::InitializeMoebiusStrip()
 		vertices[++i].Pos = MoebiusStripPos(i * delta, -1);
 		vertices[i].Normal = CreateNormalVector(i * delta, -1);
 	}
-	m_vbMoebius = m_device.CreateVertexBuffer(vertices, DIVISION_NUMBER);
+	m_vbMoebius = m_device.CreateVertexBuffer(vertices, MOEBIUS_N);
 
-	unsigned short indices[DIVISION_NUMBER * 3];
+	unsigned short indices[MOEBIUS_N * 3];
 	int index = 0;
-	for (int i = 0; i < DIVISION_NUMBER; i += 2)
+	for (int i = 0; i < MOEBIUS_N; i += 2)
 	{
 		indices[index++] = i;
-		indices[index++] = (i + 1) % DIVISION_NUMBER;
-		indices[index++] = (i + 3) % DIVISION_NUMBER;
+		indices[index++] = (i + 3) % MOEBIUS_N;
+		indices[index++] = (i + 1) % MOEBIUS_N;
 
-		indices[index++] = (i + 3) % DIVISION_NUMBER;
-		indices[index++] = (i + 2) % DIVISION_NUMBER;
 		indices[index++] = i;
+		indices[index++] = (i + 2) % MOEBIUS_N;
+		indices[index++] = (i + 3) % MOEBIUS_N;
 	}
 
-	m_ibMoebius = m_device.CreateIndexBuffer(indices, DIVISION_NUMBER * 3);
+	m_ibMoebius = m_device.CreateIndexBuffer(indices, MOEBIUS_N * 3);
 }
 
 XMFLOAT3 Butterfly::CreateNormalVector(float t, float s)
@@ -278,13 +302,13 @@ XMFLOAT3 Butterfly::CreateNormalVector(float t, float s)
 }
 
 void Butterfly::InitializeButterfly()
-//Create vertex and index buffers for the butterfly wing
+	//Create vertex and index buffers for the butterfly wing
 {
 	//TODO: write code here
 }
 
 void Butterfly::InitializeBilboards()
-//Initialize bilboard resources (vertex, pixel shaders, input layout, vertex, index buffers etc.)
+	//Initialize bilboard resources (vertex, pixel shaders, input layout, vertex, index buffers etc.)
 {
 
 }
@@ -357,8 +381,13 @@ void Butterfly::UpdateCamera()
 	m_context->UpdateSubresource(m_cbView.get(), 0, 0, &viewMtx, 0, 0);
 }
 
+void Butterfly::UpdateCamera(const XMMATRIX& matrix)
+{
+	m_context->UpdateSubresource(m_cbView.get(), 0, 0, &matrix, 0, 0);
+}
+
 void Butterfly::UpdateButterfly(float dtime)
-//Compute the matrices for butterfly wings. Position on the strip is determined based on time
+	//Compute the matrices for butterfly wings. Position on the strip is determined based on time
 {
 	//Time passed since the current lap started
 	static float lap = 0.0f;
@@ -377,7 +406,7 @@ void Butterfly::UpdateButterfly(float dtime)
 }
 
 void Butterfly::SetLight0()
-//Setup one positional light at the camera
+	//Setup one positional light at the camera
 {
 	XMFLOAT4 positions[3];
 	ZeroMemory(positions, sizeof(XMFLOAT4)* 3);
@@ -393,12 +422,14 @@ void Butterfly::SetLight0()
 }
 
 void Butterfly::SetLight1()
-//Setup one white positional light at the camera
-//Setup two additional positional lights, green and blue.
+	//Setup one white positional light at the camera
+	//Setup two additional positional lights, green and blue.
 {
 	XMFLOAT4 positions[3];
 	ZeroMemory(positions, sizeof(XMFLOAT4)* 3);
 	positions[0] = m_camera.GetPosition(); //white light position
+	positions[1] = GREEN_LIGHT_POS;
+	positions[2] = BLUE_LIGHT_POS;
 	//TODO: write the rest of code here
 	m_context->UpdateSubresource(m_cbLightPos.get(), 0, 0, positions, 0, 0);
 
@@ -407,6 +438,8 @@ void Butterfly::SetLight1()
 	colors[0] = XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f); //ambient color
 	colors[1] = XMFLOAT4(1.0f, 0.8f, 1.0f, 100.0f); //surface [ka, kd, ks, m]
 	colors[2] = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); //white light color
+	colors[3] = XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f); //green light color
+	colors[4] = XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f); //blue light color
 	//TODO: write the rest of code here
 	m_context->UpdateSubresource(m_cbLightColors.get(), 0, 0, colors, 0, 0);
 }
@@ -453,7 +486,7 @@ void Butterfly::DrawBox()
 }
 
 void Butterfly::DrawDodecahedron(bool colors)
-//Draw dodecahedron. If color is true, use render faces with coresponding colors. Otherwise render using white color
+	//Draw dodecahedron. If color is true, use render faces with coresponding colors. Otherwise render using white color
 {
 	//TODO: write code here
 	for (int i = 0; i < 12; i++)
@@ -469,7 +502,7 @@ void Butterfly::DrawDodecahedron(bool colors)
 }
 
 void Butterfly::DrawMoebiusStrip()
-//Draw the Moebius strip
+	//Draw the Moebius strip
 {
 	//TODO: write code here
 	const XMMATRIX worldMtx = XMMatrixIdentity();
@@ -478,34 +511,59 @@ void Butterfly::DrawMoebiusStrip()
 	ID3D11Buffer* b = m_vbMoebius.get();
 	m_context->IASetVertexBuffers(0, 1, &b, &VB_STRIDE, &VB_OFFSET);
 	m_context->IASetIndexBuffer(m_ibMoebius.get(), DXGI_FORMAT_R16_UINT, 0);
-	m_context->DrawIndexed(DIVISION_NUMBER * 3, 0, 0);
+	m_context->DrawIndexed(MOEBIUS_N * 3, 0, 0);
 }
 
 void Butterfly::DrawButterfly()
-//Draw the butterfly
+	//Draw the butterfly
 {
 	//TODO: write code here
 }
 
 void Butterfly::DrawBilboards()
-//Setup bilboards rendering and draw them
+	//Setup bilboards rendering and draw them
 {
 
 }
 
 void Butterfly::DrawMirroredWorld(int i)
-//Draw the mirrored scene reflected in the i-th dodecahedron face
+	//Draw the mirrored scene reflected in the i-th dodecahedron face
 {
 	//Setup render state for writing to the stencil buffer
+	m_context->OMSetDepthStencilState(m_dssWrite.get(), i + 1);
 
-	//Draw the i-th face
+	//Draw the i-th face	
+	const XMMATRIX worldMtx = m_dodecahedronMtx[i];
+	m_context->UpdateSubresource(m_cbWorld.get(), 0, 0, &worldMtx, 0, 0);
 
+	ID3D11Buffer* b = m_vbPentagon.get();
+	m_context->IASetVertexBuffers(0, 1, &b, &VB_STRIDE, &VB_OFFSET);
+	m_context->IASetIndexBuffer(m_ibPentagon.get(), DXGI_FORMAT_R16_UINT, 0);
+	m_context->DrawIndexed(9, 0, 0);
+	
+	//Set depth test
+	m_context->OMSetDepthStencilState(m_dssTest.get(), i + 1);
 	//Setup render state and view matrix for rendering the mirrored world
+	//Sets the CCW face test
+	m_context->RSSetState(m_rsCounterClockwise.get());
+	
+	XMMATRIX viewMtx;
+	m_camera.GetViewMatrix(viewMtx);
+	XMMATRIX mtx = m_mirrorMtx[i] * viewMtx;
+
+	UpdateCamera(mtx);
 
 	//Draw objects
+	DrawMoebiusStrip();
+	DrawButterfly();
+	SetLight0();
+	DrawDodecahedron(false);
+	SetLight1();
 
 	//Restore rendering state to it's original values
-
+	m_context->RSSetState(NULL);
+	m_context->OMSetDepthStencilState(NULL, 0);
+	UpdateCamera();
 }
 
 void Butterfly::Render()

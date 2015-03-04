@@ -56,8 +56,11 @@ namespace gk2
 		static const unsigned int VB_STRIDE;
 		static const unsigned int VB_OFFSET;
 		static const unsigned int BS_MASK;
-		//Division number for Mobius strip
-		static const unsigned int DIVISION_NUMBER = 128;
+
+		//Blue light position
+		static const XMFLOAT4 BLUE_LIGHT_POS;
+		//Green light position
+		static const XMFLOAT4 GREEN_LIGHT_POS;
 
 		//Table of colors for dodecahedron's faces
 		static const XMFLOAT4 COLORS[12];
@@ -152,6 +155,7 @@ namespace gk2
 
 		//Updates camera-related constant buffers
 		void UpdateCamera();
+		void UpdateCamera(const XMMATRIX& matrix);
 		//Updates wing's matrices
 		void UpdateButterfly(float dt);
 
