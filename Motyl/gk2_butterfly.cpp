@@ -98,6 +98,7 @@ void Butterfly::InitializeRenderStates()
 	//Setup render states used in various stages of the scene rendering
 {
 	D3D11_DEPTH_STENCIL_DESC dssDesc = m_device.DefaultDepthStencilDesc();
+	dssDesc.StencilEnable = true;
 	//Disable writing to the buffer (bufor szablonu)
 	dssDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
 
@@ -112,6 +113,7 @@ void Butterfly::InitializeRenderStates()
 	m_dssWrite = m_device.CreateDepthStencilState(dssDesc);
 
 	//Enable previously disabled buffer
+	dssDesc.DepthEnable = true;
 	dssDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
 	//Pass the test only if values in buffer are equal to the test one
 	dssDesc.FrontFace.StencilFunc = D3D11_COMPARISON_EQUAL;
@@ -587,7 +589,7 @@ void Butterfly::Render()
 	//render dodecahedron with one light and alpha blending
 	m_context->OMSetBlendState(m_bsAlpha.get(), 0, BS_MASK);
 	SetLight0();
-	DrawDodecahedron(true);
+	//DrawDodecahedron(true);
 	m_context->OMSetBlendState(0, 0, BS_MASK);
 
 	//render the rest of the scene with all lights
