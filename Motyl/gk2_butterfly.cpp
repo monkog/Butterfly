@@ -131,6 +131,16 @@ void Butterfly::InitializeRenderStates()
 	m_rsCounterClockwise = m_device.CreateRasterizerState(rsDesc);
 
 	D3D11_BLEND_DESC bsDesc = m_device.DefaultBlendDesc();
+
+	bsDesc.RenderTarget[0].BlendEnable = true;
+	//Define mixing of the channels
+	bsDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+	bsDesc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+	bsDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+	bsDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+	bsDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+	bsDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+
 	//Setup alpha blending
 	m_bsAlpha = m_device.CreateBlendState(bsDesc);
 }
@@ -307,6 +317,43 @@ void Butterfly::InitializeButterfly()
 	//Create vertex and index buffers for the butterfly wing
 {
 	//TODO: write code here
+	VertexPosNormal vertices[8];
+
+	vertices[0].Pos = XMFLOAT3(-1, 1, 0);
+	vertices[0].Normal = XMFLOAT3(0, 0, 1);
+	vertices[1].Pos = XMFLOAT3(1, 1, 0);
+	vertices[1].Normal = XMFLOAT3(0, 0, 1);
+	vertices[2].Pos = XMFLOAT3(-1, -1, 0);
+	vertices[2].Normal = XMFLOAT3(0, 0, 1);
+	vertices[3].Pos = XMFLOAT3(1, -1, 0);
+	vertices[3].Normal = XMFLOAT3(0, 0, 1);
+
+	vertices[4].Pos = XMFLOAT3(-1, 1, 0);
+	vertices[4].Normal = XMFLOAT3(0, 0, -1);
+	vertices[5].Pos = XMFLOAT3(1, 1, 0);
+	vertices[5].Normal = XMFLOAT3(0, 0, -1);
+	vertices[6].Pos = XMFLOAT3(-1, -1, 0);
+	vertices[6].Normal = XMFLOAT3(0, 0, -1);
+	vertices[7].Pos = XMFLOAT3(1, -1, 0);
+	vertices[7].Normal = XMFLOAT3(0, 0, -1);
+
+	m_vbWing = m_device.CreateVertexBuffer(vertices, 8);
+
+	unsigned short indices[12];
+	indices[0] = 0;
+	indices[1] = 1;
+	indices[2] = 2;
+	indices[3] = 1;
+	indices[4] = 3;
+	indices[5] = 2;
+	indices[6] = 4;
+	indices[7] = 6;
+	indices[8] = 5;
+	indices[9] = 5;
+	indices[10] = 6;
+	indices[11] = 7;
+
+	m_ibWing = m_device.CreateIndexBuffer(indices, 12);
 }
 
 void Butterfly::InitializeBilboards()
@@ -391,6 +438,7 @@ void Butterfly::UpdateCamera(const XMMATRIX& matrix)
 void Butterfly::UpdateButterfly(float dtime)
 	//Compute the matrices for butterfly wings. Position on the strip is determined based on time
 {
+
 	//Time passed since the current lap started
 	static float lap = 0.0f;
 	lap += dtime;
@@ -405,6 +453,24 @@ void Butterfly::UpdateButterfly(float dtime)
 		a = 2 * WING_MAX_A - a;
 
 	//TODO: write the rest of code here
+	m_wingMtx[0] = m_wingMtx[1] = XMMatrixRotationY(XM_2PI / 4) * XMMatrixTranslation(0, 0, 1) * XMMatrixScaling(1, WING_W / 2, WING_H / 2) ;
+	m_wingMtx[0] *= XMMatrixRotationY(a);
+	m_wingMtx[1] *= XMMatrixRotationY(-a);
+	
+	XMFLOAT3 ds;
+	XMStoreFloat3(&ds, MoebiusStripDs(t, 0));
+	XMFLOAT3 dt;
+	XMStoreFloat3(&dt, MoebiusStripDt(t, 0));
+	XMFLOAT3 pos = MoebiusStripPos(t, 0);
+	XMFLOAT3 n = CreateNormalVector(t, 0);
+
+	XMMATRIX tangentSpace(ds.x, ds.y, ds.z, 0
+						, dt.x, dt.y, dt.z, 0
+						, n.x, n.y, n.z, 0
+						, pos.x, pos.y, pos.z, 1);
+	
+	m_wingMtx[0] *= tangentSpace;
+	m_wingMtx[1] *= tangentSpace;
 }
 
 void Butterfly::SetLight0()
@@ -496,6 +562,11 @@ void Butterfly::DrawDodecahedron(bool colors)
 		const XMMATRIX worldMtx = m_dodecahedronMtx[i];
 		m_context->UpdateSubresource(m_cbWorld.get(), 0, 0, &worldMtx, 0, 0);
 
+		if(colors)
+			SetSurfaceColor(COLORS[i]);
+		else
+			SetSurfaceColor(XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
+
 		ID3D11Buffer* b = m_vbPentagon.get();
 		m_context->IASetVertexBuffers(0, 1, &b, &VB_STRIDE, &VB_OFFSET);
 		m_context->IASetIndexBuffer(m_ibPentagon.get(), DXGI_FORMAT_R16_UINT, 0);
@@ -520,6 +591,16 @@ void Butterfly::DrawButterfly()
 	//Draw the butterfly
 {
 	//TODO: write code here
+	for(int i = 0; i < 2; i++)
+	{
+		const XMMATRIX worldMtx = m_wingMtx[i];
+		m_context->UpdateSubresource(m_cbWorld.get(), 0, 0, &worldMtx, 0, 0);
+
+		ID3D11Buffer* b = m_vbWing.get();
+		m_context->IASetVertexBuffers(0, 1, &b, &VB_STRIDE, &VB_OFFSET);
+		m_context->IASetIndexBuffer(m_ibWing.get(), DXGI_FORMAT_R16_UINT, 0);
+		m_context->DrawIndexed(12, 0, 0);
+	}
 }
 
 void Butterfly::DrawBilboards()
@@ -542,13 +623,13 @@ void Butterfly::DrawMirroredWorld(int i)
 	m_context->IASetVertexBuffers(0, 1, &b, &VB_STRIDE, &VB_OFFSET);
 	m_context->IASetIndexBuffer(m_ibPentagon.get(), DXGI_FORMAT_R16_UINT, 0);
 	m_context->DrawIndexed(9, 0, 0);
-	
+
 	//Set depth test
 	m_context->OMSetDepthStencilState(m_dssTest.get(), i + 1);
 	//Setup render state and view matrix for rendering the mirrored world
 	//Sets the CCW face test
 	m_context->RSSetState(m_rsCounterClockwise.get());
-	
+
 	XMMATRIX viewMtx;
 	m_camera.GetViewMatrix(viewMtx);
 	XMMATRIX mtx = m_mirrorMtx[i] * viewMtx;
@@ -589,7 +670,7 @@ void Butterfly::Render()
 	//render dodecahedron with one light and alpha blending
 	m_context->OMSetBlendState(m_bsAlpha.get(), 0, BS_MASK);
 	SetLight0();
-	//DrawDodecahedron(true);
+	DrawDodecahedron(true);
 	m_context->OMSetBlendState(0, 0, BS_MASK);
 
 	//render the rest of the scene with all lights
