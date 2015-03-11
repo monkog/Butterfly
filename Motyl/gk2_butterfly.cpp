@@ -359,7 +359,15 @@ void Butterfly::InitializeButterfly()
 void Butterfly::InitializeBilboards()
 	//Initialize bilboard resources (vertex, pixel shaders, input layout, vertex, index buffers etc.)
 {
-
+	//Nowy blend state
+	//Narysowac prostokat
+	//Zrobic vectorPos z 4 wierzcholkami i indices z[6] 
+	//Krzywa idzie od lewego gornego
+	//macierz translacji = macierz translacji do pozycji swiata
+	//metoda set bilboards shader
+	//wlaczyc blend state, 
+	//narysowac swiatlo
+	//wrocic do stanu normalnego
 }
 
 void Butterfly::SetShaders()
@@ -453,7 +461,7 @@ void Butterfly::UpdateButterfly(float dtime)
 		a = 2 * WING_MAX_A - a;
 
 	//TODO: write the rest of code here
-	m_wingMtx[0] = m_wingMtx[1] = XMMatrixRotationY(XM_2PI / 4) * XMMatrixTranslation(0, 0, 1) * XMMatrixScaling(1, WING_W / 2, WING_H / 2) ;
+	m_wingMtx[0] = m_wingMtx[1] = XMMatrixRotationY(XM_PIDIV2) * XMMatrixTranslation(0, 0, 1) * XMMatrixScaling(1, WING_W / 2, WING_H / 2) ;
 	m_wingMtx[0] *= XMMatrixRotationY(a);
 	m_wingMtx[1] *= XMMatrixRotationY(-a);
 	
